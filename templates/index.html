@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Chatbot UI</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Define CSS variables for light mode */
+    :root {
+      --bg-color: #f7f7f7;
+      --container-bg: #ffffff;
+      --header-bg: #007bff;
+      --header-text: #ffffff;
+      --body-text: #333333;
+      --user-msg-bg: #007bff;
+      --user-msg-text: #ffffff;
+      --bot-msg-bg: #f1f0f0;
+      --bot-msg-text: #333333;
+      --footer-bg: #f1f0f0;
+      --code-bg: #272822;
+      --code-text: #f8f8f2;
+    }
+    /* Dark mode overrides */
+    .dark-mode {
+      --bg-color: #121212;
+      --container-bg: #1e1e1e;
+      --header-bg: #333333;
+      --header-text: #ffffff;
+      --body-text: #e0e0e0;
+      --user-msg-bg: #1a73e8;
+      --user-msg-text: #ffffff;
+      --bot-msg-bg: #2e2e2e;
+      --bot-msg-text: #e0e0e0;
+      --footer-bg: #2e2e2e;
+      --code-bg: #1e1e1e;
+      --code-text: #e0e0e0;
+    }
+    body {
+      background-color: var(--bg-color);
+    }
+    .chat-container {
+      max-width: 600px;
+      margin: 50px auto;
+      background-color: var(--container-bg);
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .chat-header {
+      background-color: var(--header-bg);
+      color: var(--header-text);
+      padding: 15px;
+      text-align: center;
+      position: relative;
+    }
+    .dark-toggle {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+    }
+    .chat-body {
+      padding: 20px;
+      height: 400px;
+      overflow-y: auto;
+      color: var(--body-text);
+    }
+    .chat-message {
+      margin-bottom: 15px;
+      display: flex;
+    }
+    .chat-message.user {
+      justify-content: flex-end;
+    }
+    .chat-message.bot {
+      justify-content: flex-start;
+    }
+    .message-content {
+      padding: 10px 15px;
+      border-radius: 20px;
+      max-width: 70%;
+      white-space: pre-wrap;
+    }
+    .chat-message.user .message-content {
+      background-color: var(--user-msg-bg);
+      color: var(--user-msg-text);
+    }
+    .chat-message.bot .message-content {
+      background-color: var(--bot-msg-bg);
+      color: var(--bot-msg-text);
+    }
+    .chat-footer {
+      padding: 15px;
+      background-color: var(--footer-bg);
+    }
+    #spinner {
+      display: none;
+    }
+    .code-block pre {
+      background-color: var(--code-bg);
+      color: var(--code-text);
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      margin: 0;
+    }
+    .code-block button {
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h4>Chatbot UI</h4>
+      <div class="dark-toggle">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="darkModeSwitch">
+          <label class="form-check-label" for="darkModeSwitch">Dark Mode</label>
+        </div>
+      </div>
+    </div>
+    <div id="chat" class="chat-body">
+      <!-- Chat messages will appear here -->
+    </div>
+    <div class="chat-footer">
+      <div class="input-group">
+        <input type="text" id="message-input" class="form-control" placeholder="Type your message..." aria-label="Type your message...">
+        <button class="btn btn-primary" id="send-button">Send</button>
+      </div>
+      <div id="spinner" class="mt-2 text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Bootstrap 5 JS bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const chatDiv = document.getElementById('chat');
+    const inputField = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const spinner = document.getElementById('spinner');
+    const darkModeSwitch = document.getElementById('darkModeSwitch');
+
+    // Toggle dark mode on/off
+    darkModeSwitch.addEventListener('change', () => {
+      document.body.classList.toggle('dark-mode', darkModeSwitch.checked);
+    });
+
+    sendButton.addEventListener('click', sendMessage);
+    inputField.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    // Append a message with given content
+    function appendMessage(sender, contentElement) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('chat-message', sender);
+      
+      const messageContentDiv = document.createElement('div');
+      messageContentDiv.classList.add('message-content');
+      messageContentDiv.appendChild(contentElement);
+      
+      messageDiv.appendChild(messageContentDiv);
+      chatDiv.appendChild(messageDiv);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    // Append a plain text message
+    function appendTextMessage(sender, text) {
+      const p = document.createElement('p');
+      p.textContent = text;
+      appendMessage(sender, p);
+    }
+
+    // Process and append a bot message
+    function appendBotMessage(text) {
+      if (text.includes("```")) {
+        const container = parseBotResponse(text);
+        appendMessage('bot', container);
+      } else {
+        appendTextMessage('bot', text);
+      }
+    }
+
+    // Parse bot response to separate code blocks from plain text
+    function parseBotResponse(text) {
+      const container = document.createElement('div');
+      const regex = /```(\w+)?\n([\s\S]*?)```/g;
+      let lastIndex = 0;
+      let match;
+
+      while ((match = regex.exec(text)) !== null) {
+        // Append any plain text before this code block.
+        if (match.index > lastIndex) {
+          const plainText = text.substring(lastIndex, match.index).trim();
+          if (plainText) {
+            const p = document.createElement('p');
+            p.textContent = plainText;
+            container.appendChild(p);
+          }
+        }
+        // Create a code block for the snippet.
+        const language = match[1] || '';
+        const codeContent = match[2];
+        const codeBlock = createCodeBlock(language, codeContent);
+        container.appendChild(codeBlock);
+        lastIndex = regex.lastIndex;
+      }
+      // Append any remaining text.
+      if (lastIndex < text.length) {
+        const remainingText = text.substring(lastIndex).trim();
+        if (remainingText) {
+          const p = document.createElement('p');
+          p.textContent = remainingText;
+          container.appendChild(p);
+        }
+      }
+      return container;
+    }
+
+    // Create a code block element with a copy button
+    function createCodeBlock(language, codeContent) {
+      const codeContainer = document.createElement('div');
+      codeContainer.classList.add('code-block', 'mb-2');
+
+      if (language) {
+        const langLabel = document.createElement('div');
+        langLabel.textContent = language;
+        langLabel.style.fontWeight = 'bold';
+        codeContainer.appendChild(langLabel);
+      }
+
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.textContent = codeContent;
+      pre.appendChild(code);
+      codeContainer.appendChild(pre);
+
+      const copyButton = document.createElement('button');
+      copyButton.textContent = "Copy";
+      copyButton.classList.add('btn', 'btn-sm', 'btn-secondary');
+      copyButton.onclick = function() {
+        copyToClipboard(codeContent);
+      };
+      codeContainer.appendChild(copyButton);
+
+      return codeContainer;
+    }
+
+    // Copy text to clipboard
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        console.log("Copied to clipboard!");
+      }).catch((err) => {
+        console.error("Error copying text: ", err);
+      });
+    }
+
+    // Send message to server
+    function sendMessage() {
+      const message = inputField.value.trim();
+      if (message === "") return;
+      
+      appendTextMessage('user', message);
+      inputField.value = '';
+      spinner.style.display = 'block';
+      
+      fetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: message })
+      })
+      .then(response => response.json())
+      .then(data => {
+         spinner.style.display = 'none';
+         appendBotMessage(data.response);
+      })
+      .catch(error => {
+         spinner.style.display = 'none';
+         console.error('Error:', error);
+         appendTextMessage('bot', 'Error: ' + error);
+      });
+    }
+  </script>
+</body>
+</html>
