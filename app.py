@@ -7,7 +7,7 @@ app = Flask(__name__)
 # Ollama API endpoint
 OLLAMA_API_URL = "http://127.0.0.1:11434/api/generate"
 # Choose the model you want to use (adjust as needed)
-MODEL_NAME = "qwen2.5-coder:7b"
+MODEL_NAME = "deepseek-r1:7b"
 
 @app.route('/')
 def index():

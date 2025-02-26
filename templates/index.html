@@ -171,32 +171,65 @@
       chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
-    // Append a plain text message
+    // Append a plain text message.
     function appendTextMessage(sender, text) {
       const p = document.createElement('p');
       p.textContent = text;
       appendMessage(sender, p);
     }
 
-    // Process and append a bot message
+    // Process and append a bot message.
     function appendBotMessage(text) {
-      if (text.includes("```")) {
+      // Check for <think> tags.
+      if (text.includes("<think>") && text.includes("</think>")) {
+        // Remove the thinking block from the main answer.
+        let mainAnswer = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+        // Extract thinking content.
+        let thinkingMatch = text.match(/<think>([\s\S]*?)<\/think>/);
+        let thinkingPart = thinkingMatch ? thinkingMatch[1].trim() : "";
+        const container = document.createElement('div');
+        if (mainAnswer) {
+          const p = document.createElement('p');
+          p.textContent = mainAnswer;
+          container.appendChild(p);
+        }
+        if (thinkingPart) {
+          const collapseButton = document.createElement('button');
+          collapseButton.classList.add('btn', 'btn-link', 'p-0');
+          collapseButton.textContent = "Show Thinking";
+          collapseButton.style.textDecoration = "underline";
+          const collapseDiv = document.createElement('div');
+          collapseDiv.classList.add('collapse', 'mt-2');
+          // Unique ID for the collapse element.
+          const collapseId = "collapseThinking" + Date.now();
+          collapseDiv.id = collapseId;
+          const thinkingPre = document.createElement('pre');
+          thinkingPre.textContent = thinkingPart;
+          collapseDiv.appendChild(thinkingPre);
+          collapseButton.setAttribute('data-bs-toggle', 'collapse');
+          collapseButton.setAttribute('data-bs-target', '#' + collapseId);
+          container.appendChild(collapseButton);
+          container.appendChild(collapseDiv);
+        }
+        appendMessage('bot', container);
+      }
+      // Check if the response contains code blocks.
+      else if (text.includes("```")) {
         const container = parseBotResponse(text);
         appendMessage('bot', container);
-      } else {
+      }
+      else {
         appendTextMessage('bot', text);
       }
     }
 
-    // Parse bot response to separate code blocks from plain text
+    // Parse bot response text and separate code blocks from plain text.
     function parseBotResponse(text) {
       const container = document.createElement('div');
       const regex = /```(\w+)?\n([\s\S]*?)```/g;
       let lastIndex = 0;
       let match;
-
       while ((match = regex.exec(text)) !== null) {
-        // Append any plain text before this code block.
         if (match.index > lastIndex) {
           const plainText = text.substring(lastIndex, match.index).trim();
           if (plainText) {
@@ -205,14 +238,12 @@
             container.appendChild(p);
           }
         }
-        // Create a code block for the snippet.
         const language = match[1] || '';
         const codeContent = match[2];
         const codeBlock = createCodeBlock(language, codeContent);
         container.appendChild(codeBlock);
         lastIndex = regex.lastIndex;
       }
-      // Append any remaining text.
       if (lastIndex < text.length) {
         const remainingText = text.substring(lastIndex).trim();
         if (remainingText) {
@@ -224,24 +255,21 @@
       return container;
     }
 
-    // Create a code block element with a copy button
+    // Create a formatted code block with a copy button.
     function createCodeBlock(language, codeContent) {
       const codeContainer = document.createElement('div');
       codeContainer.classList.add('code-block', 'mb-2');
-
       if (language) {
         const langLabel = document.createElement('div');
         langLabel.textContent = language;
         langLabel.style.fontWeight = 'bold';
         codeContainer.appendChild(langLabel);
       }
-
       const pre = document.createElement('pre');
       const code = document.createElement('code');
       code.textContent = codeContent;
       pre.appendChild(code);
       codeContainer.appendChild(pre);
-
       const copyButton = document.createElement('button');
       copyButton.textContent = "Copy";
       copyButton.classList.add('btn', 'btn-sm', 'btn-secondary');
@@ -249,11 +277,10 @@
         copyToClipboard(codeContent);
       };
       codeContainer.appendChild(copyButton);
-
       return codeContainer;
     }
 
-    // Copy text to clipboard
+    // Copy text to the clipboard.
     function copyToClipboard(text) {
       navigator.clipboard.writeText(text).then(() => {
         console.log("Copied to clipboard!");
@@ -262,15 +289,13 @@
       });
     }
 
-    // Send message to server
+    // Send a message to the Flask server.
     function sendMessage() {
       const message = inputField.value.trim();
       if (message === "") return;
-      
       appendTextMessage('user', message);
       inputField.value = '';
       spinner.style.display = 'block';
-      
       fetch('/chat', {
         method: 'POST',
         headers: {
