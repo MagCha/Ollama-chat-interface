@@ -182,9 +182,7 @@
     function appendBotMessage(text) {
       // Check for <think> tags.
       if (text.includes("<think>") && text.includes("</think>")) {
-        // Remove the thinking block from the main answer.
         let mainAnswer = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-        // Extract thinking content.
         let thinkingMatch = text.match(/<think>([\s\S]*?)<\/think>/);
         let thinkingPart = thinkingMatch ? thinkingMatch[1].trim() : "";
         const container = document.createElement('div');
@@ -303,15 +301,23 @@
         },
         body: JSON.stringify({ message: message })
       })
-      .then(response => response.json())
+      .then(response => {
+        console.log("Raw response:", response);
+        if (!response.ok) {
+          throw new Error("HTTP error " + response.status);
+        }
+        return response.json();
+      })
       .then(data => {
-         spinner.style.display = 'none';
-         appendBotMessage(data.response);
+        console.log("Data received:", data);
+        appendBotMessage(data.response);
       })
       .catch(error => {
-         spinner.style.display = 'none';
-         console.error('Error:', error);
-         appendTextMessage('bot', 'Error: ' + error);
+        console.error("Error:", error);
+        appendTextMessage('bot', 'Error: ' + error);
+      })
+      .finally(() => {
+        spinner.style.display = 'none';
       });
     }
   </script>
