@@ -1,4 +1,4 @@
-# Personal Chatbot (Ollama Boi)
+# Personal Chatbot
 
 A modern, personal-use chatbot interface with a React frontend and Flask backend. Features include custom themes, background image support, persistent chat history, a sidebar for saved chats, and a polished, user-friendly UI.
 
