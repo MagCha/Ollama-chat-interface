@@ -45,7 +45,7 @@ ollamaboi/
 The React app runs on [http://localhost:3000](http://localhost:3000) and the Flask backend on [http://localhost:5000](http://localhost:5000).
 
 ## License
-The `LICENSE` file should be placed at the project root (not just in the backend folder) to cover the entire project.
+This project is licensed under the MIT License. See the `LICENSE` file at the project root for details.
 
 ## Notes
 - All chat and theme data is stored in the browser (no server-side persistence).
